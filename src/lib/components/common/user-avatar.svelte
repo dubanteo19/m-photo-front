@@ -1,0 +1,41 @@
+<script lang="ts">
+	import type { UserInfo } from '$lib/types/user';
+	import { resolve } from '$app/paths';
+	type Props = {
+		user: UserInfo;
+		class?: string;
+	};
+	let { user, class: className = '' }: Props = $props();
+
+	let imageFailed = $state(false);
+
+	const initials = $derived.by(() => {
+		return user.displayName
+			.trim()
+			.split(/\s+/)
+			.slice(0, 2)
+			.map((part: string) => part[0])
+			.join('')
+			.toUpperCase();
+	});
+</script>
+
+<a
+	href={resolve(`/profile/${user.username}`)}
+	target="_blank"
+	referrerpolicy="no-referrer"
+	class="shrink-0 size-8 rounded-full overflow-hidden select-none block hover:opacity-90 transition-opacity hover:no-underline! {className}"
+>
+	{#if user.avatarUrl && !imageFailed}
+		<img
+			src={user.avatarUrl}
+			alt={user.displayName}
+			class="w-full h-full object-cover"
+			onerror={() => (imageFailed = true)}
+		/>
+	{:else}
+		<div class="w-full h-full flex-center bg-slate-400 text-white text-xs font-semibold">
+			{initials}
+		</div>
+	{/if}
+</a>

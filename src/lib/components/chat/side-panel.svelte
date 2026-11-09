@@ -1,0 +1,178 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { authService } from '$lib/api/auth';
+	import { roomService, type CreateRoomRequest } from '$lib/api/room';
+	import { userService } from '$lib/api/user';
+	import { Button } from '$lib/components/ui/button';
+	import { useUserRoomsQuery } from '$lib/queries/use-user-room';
+	import { notificationService } from '$lib/services/notification-service.svelte';
+	import { useUser } from '$lib/stores/auth.svelte';
+	import { Bell, BellOff, PlusIcon } from '@lucide/svelte';
+	import CreateRoomDialog from '../room/create-room-dialog.svelte';
+	import Spinner from '../ui/spinner/spinner.svelte';
+	import { Badge } from '../ui/badge';
+	import { toast } from 'svelte-sonner';
+	import { RoomType } from '$lib/types/room';
+	import { onMount, untrack } from 'svelte';
+	import { UserEvent, userEventService } from '$lib/services/user-event.svelte';
+	import { presenceService } from '$lib/api/presence-service';
+	import { titleNotification } from '$lib/services/title-notification-service.svelte';
+	import { faviconNotification } from '$lib/services/favicon-notification.service';
+
+	let { sidebarOpen = $bindable(), roomId } = $props();
+	let isOpenRoomDialog = $state(false);
+
+	const { currentUser, setUser } = $derived(useUser());
+	const { query } = useUserRoomsQuery();
+	let { data: rooms = [], isLoading } = $derived(query);
+	async function handleLogout() {
+		await authService.logout();
+		await goto(resolve('/login'));
+	}
+	let presenceInterval: ReturnType<typeof setInterval>;
+
+	async function updatePresence() {
+		const peerIds = rooms.filter((room) => room.type === RoomType.DM).map((room) => room.peerId);
+		if (peerIds.length === 0) return;
+		const presence = await presenceService.getPresence(peerIds);
+		rooms = rooms.map((room) => ({
+			...room,
+			online: presence[room.peerId] ?? false
+		}));
+	}
+
+	$effect(() => {
+		if (isLoading) return;
+		untrack(() => {
+			if (rooms.length === 0) return;
+			updatePresence();
+			presenceInterval = setInterval(updatePresence, 10_000);
+		});
+
+		return () => clearInterval(presenceInterval);
+	});
+
+	onMount(() => {
+		return userEventService.subscribe(UserEvent.ROOM_UNREAD_UPDATED, (payload) => {
+			rooms = rooms.map((room) =>
+				(room.id === payload.roomId && payload.roomId != roomId) ? { ...room, unreadCount: room.unreadCount + 1 } : room
+
+			);
+			faviconNotification.start();
+			titleNotification.notify();
+		});
+	});
+	async function handleCreateRoom(data: CreateRoomRequest) {
+		await roomService.createRoom(data);
+	}
+	const toggleUpdateNotifications = async () => {
+		try {
+			const updatedUser = await userService.updateNotificationSettings({
+				allowNotify: !currentUser.allowNotify
+			});
+			setUser(updatedUser);
+		} catch (error) {
+			console.error('Error toggling notifications:', error);
+			toast.error('Failed to toggle notifications.');
+		}
+	};
+</script>
+
+<aside
+	class="
+		fixed inset-y-0 left-0 z-50
+		flex h-full min-h-0 w-64 shrink-0 flex-col
+		border-r bg-sidebar
+		transition-transform duration-200 ease-in-out
+		{sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+		md:static md:translate-x-0 md:transition-none
+	"
+>
+	{#if notificationService.status === 'default'}
+		<div class="p-4 pb-0">
+			<Button
+				onclick={async () => {
+					await notificationService.requestPermission();
+				}}>🔔 Enable Notification</Button
+			>
+		</div>
+	{/if}
+	<div class="p-4 border-b flex items-center justify-between">
+		<span class="text-xl font-bold tracking-wider text-primary">m-chat</span>
+		<Button
+			variant="default"
+			size="icon"
+			title="Toggle Notifications"
+			onclick={toggleUpdateNotifications}
+		>
+			{#if currentUser.allowNotify}
+				<Bell />
+			{:else}
+				<BellOff />
+			{/if}
+		</Button>
+		<Button onclick={() => (sidebarOpen = false)} class="md:hidden">✕</Button>
+	</div>
+	<nav class="p-4 space-y-2 overflow-y-auto flex-1 min-h-0">
+		<div class="flex items-center justify-between">
+			<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Rooms</p>
+			<Button size="icon" variant="outline" onclick={() => (isOpenRoomDialog = true)}>
+				<PlusIcon />
+			</Button>
+		</div>
+		{#if isLoading}
+			<Spinner />
+		{:else}
+			{#each rooms as room (room.id)}
+				<div class="relative">
+					<a href={resolve(`/room/${room.id}`)} onclick={() => (sidebarOpen = false)}>
+						<div
+							class:bg-primary={room.id === roomId}
+							class="flex items-center px-3 py-2 rounded-md text-sm transition-colors hover:bg-slate-700/50 hover:text-slate-200"
+						>
+							{#if room.type == RoomType.DM}
+								<div class="relative">
+									<img
+										src={room.peerAvatarUrl}
+										alt={room.peerDisplayName}
+										class="size-6 rounded-full mr-2"
+									/>
+									{#if room.online}
+										<span
+											class="absolute size-2 bottom-0 right-1 bg-green-500 rounded ring-2 ring-white z-10"
+										></span>
+									{/if}
+								</div>
+							{/if}
+							{room.type === RoomType.DM ? room.peerDisplayName : `# ${room.name}`}
+						</div>
+					</a>
+					{#if room.unreadCount > 0}
+						<Badge
+							class="absolute -top-1 -right-1 h-5 min-w-5 rounded-full px-1 font-mono"
+							variant="default"
+						>
+							{room.unreadCount > 99 ? '99+' : room.unreadCount}
+						</Badge>
+					{/if}
+				</div>
+			{/each}
+		{/if}
+	</nav>
+
+	<div class="p-4 border-t flex shrink-0 items-center justify-between">
+		<div class="truncate mr-2">
+			<p class="text-xs">Logged in as</p>
+			{#if currentUser.username}
+				<a href={resolve(`/profile/${currentUser.username}`)} class="text-sm text-primary">
+					{currentUser.username}
+				</a>
+			{:else}
+				<span class="text-sm">Connecting...</span>
+			{/if}
+		</div>
+		<Button onclick={handleLogout} size="sm" variant="destructive">Logout</Button>
+	</div>
+	<CreateRoomDialog onsubmit={handleCreateRoom} bind:open={isOpenRoomDialog} />
+</aside>
