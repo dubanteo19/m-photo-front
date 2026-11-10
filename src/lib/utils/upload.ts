@@ -2,6 +2,7 @@ import imageCompression from 'browser-image-compression';
 
 const MAX_MEDIA_SIZE = 200 * 1024 * 1024; // 200MB
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
 export function extractImageFromPaste(event: ClipboardEvent): File | null {
 	const items = event.clipboardData?.items;
 	if (!items) return null;

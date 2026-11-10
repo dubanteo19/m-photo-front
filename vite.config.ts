@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			host: '0.0.0.0',
 			port: 5173,
-			allowedHosts: ['m-photo.dbt19.site'],
+			allowedHosts: ['photo.dbt19.site'],
 			proxy: {
 				'/api': {
 					target: env.PUBLIC_BASE_URL,

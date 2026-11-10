@@ -1,14 +1,21 @@
 <script lang="ts">
 	import { photoService } from '$lib/api/photo-service';
+
+	import { resolve } from '$app/paths';
 	import { storageService } from '$lib/api/storage';
 	import FileUploader from '$lib/components/common/file-uploader.svelte';
+	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
+	import 'photoswipe/dist/photoswipe.css';
 	import { Button } from '$lib/components/ui/button';
 
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { useUserPhotosQuery } from '$lib/queries/use-user-sticker';
 	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
-	import { Plus, Trash2 } from '@lucide/svelte';
+	import { Plus } from '@lucide/svelte';
+	import PhotoSwipe from 'photoswipe';
 	import { toast } from 'svelte-sonner';
+	import { authService } from '$lib/api/auth';
+	import { goto } from '$app/navigation';
 	const { query } = useUserPhotosQuery();
 
 	const { isLoading, data } = $derived(query);
@@ -45,6 +52,7 @@
 				latitude: null,
 				longitude: null,
 				size: file.size,
+				sourceSize: file.size,
 				takenAt: null
 			};
 
@@ -59,17 +67,52 @@
 				// upload file to storage
 				await storageService.uploadFile(uploadUrl, file);
 
-				const updatedPhoto = await photoService.completeUpload(photoId);
-				photos = photos.map((p) => (p.id === optimisticId ? updatedPhoto : p));
+				await photoService.completeUpload(photoId);
 			} catch (error) {
 				photos = photos.filter((p) => p.id !== optimisticId);
 				toast.error(`Failed to upload photo: ${file.name}`);
 			}
 		}
 	}
+
+	function openPhoto(selectedPhoto: PhotoInfo) {
+		const dataSource = photos.map((photo) => {
+			return {
+				src: photo.imageUrl,
+				width: photo.width ?? 800,
+				height: photo.height ?? 600,
+				alt: 'Chat attachment'
+			};
+		});
+
+		// 3. Find active index
+		const initialIndex = photos.findIndex((photo) => photo.id === selectedPhoto.id);
+		// 4. Instantiate PhotoSwipe
+		const pswp = new PhotoSwipe({
+			dataSource,
+			index: initialIndex >= 0 ? initialIndex : 0,
+			imageClickAction: 'zoom-or-close',
+			bgClickAction: 'close',
+			wheelToZoom: true,
+			secondaryZoomLevel: 1.5,
+			maxZoomLevel: 3,
+			bgOpacity: 0.95,
+			loop: true,
+			padding: { top: 20, bottom: 40, left: 100, right: 100 },
+			closeOnVerticalDrag: true
+		});
+
+		pswp.init();
+	}
+
+	async function handleLogout() {
+		await authService.logout();
+		await goto(resolve('/login'));
+	}
 </script>
 
-<div class="mx-auto w-full max-w-4xl space-y-6 p-6">
+<div class="mx-auto w-full max-w-4xl overflow-y-auto space-y-6 p-6">
+	<Button onclick={handleLogout} size="sm" variant="destructive">Logout</Button>
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="space-y-1">
@@ -80,29 +123,17 @@
 			<Plus />
 		</Button>
 	</div>
+
+	<div class="flex items-center justify-between">
+		<FileUploader label="add photo" onFilesChanged={handleFiles} />
+	</div>
 	{#if isLoading}
 		<div class="flex-center min-h-60">
 			<Spinner />
 		</div>
 	{/if}
 	{#if photos.length > 0}
-		<div class="grid gap-4 sm:grid-cols-2">
-			{#each photos as photo (photo.id)}
-				<div class="group relative aspect-square rounded-lg border bg-muted p-2">
-					<img src={photo.thumbnailUrl} alt={'Sticker'} class="size-full object-contain" />
-					{@render photoStatus(photo.status)}
-					<Button
-						class="absolute flex-center right-0 top-0 hidden rounded-full  group-hover:block"
-						size="icon-sm"
-						variant="destructive"
-					>
-						<Trash2 />
-					</Button>
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<FileUploader label="Add stickers" onFilesChanged={handleFiles} />
+		<PhotoGrid {photos} onPhotoClick={openPhoto} />
 	{/if}
 </div>
 
@@ -125,15 +156,3 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root> -->
-
-{#snippet photoStatus(status: PhotoStatus)}
-	<div
-		class="absolute bottom-1 right-1 rounded-lg bg-black/70 p-1 text-[10px] text-white"
-		class:bg-green-700={status === PhotoStatus.READY}
-		class:bg-blue-500={status === PhotoStatus.UPLOADING}
-		class:bg-yellow-500={status === PhotoStatus.PROCESSING}
-		class:bg-red-500={status === PhotoStatus.FAILED}
-	>
-		{status}
-	</div>
-{/snippet}

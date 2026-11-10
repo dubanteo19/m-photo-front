@@ -16,6 +16,7 @@ export interface PhotoInfo {
     width: number | null;
     height: number | null;
     size: number;
+    sourceSize: number;
     imageUrl: string;
     thumbnailUrl: string;
     status: PhotoStatus;

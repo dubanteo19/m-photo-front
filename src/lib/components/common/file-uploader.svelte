@@ -4,7 +4,6 @@
 		label,
 		onFilesChanged,
 		multiple = true
-
 	}: {
 		label: string;
 		onFilesChanged: (files: FileList | null) => void;
@@ -18,7 +17,7 @@
 </script>
 
 <label
-	class="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-center transition hover:bg-muted"
+	class="flex-center aspect-square cursor-pointer flex-col rounded-lg border-2 border-dashed text-center transition hover:bg-muted"
 	ondragover={(event) => event.preventDefault()}
 	ondrop={handleDrop}
 >
@@ -28,7 +27,7 @@
 	<input
 		type="file"
 		accept="image/*"
-		multiple={multiple}
+		{multiple}
 		class="hidden"
 		onchange={(event) => onFilesChanged(event.currentTarget.files)}
 	/>
