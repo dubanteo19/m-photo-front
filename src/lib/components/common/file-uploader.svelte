@@ -17,7 +17,7 @@
 </script>
 
 <label
-	class="flex-center aspect-square cursor-pointer flex-col rounded-lg border-2 border-dashed text-center transition hover:bg-muted"
+	class="flex-center flex-1 max-h-32 aspect-square cursor-pointer flex-col rounded-lg border-2 border-dashed text-center transition hover:bg-muted"
 	ondragover={(event) => event.preventDefault()}
 	ondrop={handleDrop}
 >

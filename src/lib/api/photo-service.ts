@@ -5,7 +5,13 @@ import type {
 	PhotoUploadResponse
 } from '$lib/types/photo';
 import { apiClient } from './client';
-
+export interface AccountStorageStats {
+	photoCount: number;
+	originalBytes: number;
+	storedBytes: number;
+	savedBytes: number;
+	compressionPercentage: number;
+}
 export const photoService = {
 	getPhotos: async (cursor?: string): Promise<PhotoPageResponse> => {
 		return apiClient.get('/photos', {
@@ -29,5 +35,8 @@ export const photoService = {
 
 	deletePhoto: async (id: number): Promise<void> => {
 		return apiClient.delete(`/photos/${id}`);
+	},
+	getStorageStats: async (): Promise<AccountStorageStats> => {
+		return apiClient.get('/photos/storage-stats');
 	}
 };

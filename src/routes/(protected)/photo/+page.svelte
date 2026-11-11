@@ -1,30 +1,34 @@
 <script lang="ts">
 	import { photoService } from '$lib/api/photo-service';
 
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { authService } from '$lib/api/auth';
 	import { storageService } from '$lib/api/storage';
 	import FileUploader from '$lib/components/common/file-uploader.svelte';
 	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
-	import 'photoswipe/dist/photoswipe.css';
+	import StorageStats from '$lib/components/photo/storageStats.svelte';
 	import { Button } from '$lib/components/ui/button';
-
 	import { Spinner } from '$lib/components/ui/spinner';
-	import { useUserPhotosQuery } from '$lib/queries/use-user-sticker';
+	import { useUserPhotosQuery } from '$lib/queries/use-user-photo';
+	import { useUserStatsQuery } from '$lib/queries/use-user-stats';
 	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
 	import { Plus } from '@lucide/svelte';
 	import PhotoSwipe from 'photoswipe';
+	import 'photoswipe/dist/photoswipe.css';
 	import { toast } from 'svelte-sonner';
-	import { authService } from '$lib/api/auth';
-	import { goto } from '$app/navigation';
+	import { useUser } from '$lib/stores/auth.svelte';
 	const { query } = useUserPhotosQuery();
-
+	const { query: userStatsQuery } = useUserStatsQuery();
 	const { isLoading, data } = $derived(query);
 	let photos = $derived(data?.pages.flatMap((page) => page.items) ?? []);
+	let { data: stats, isLoading: isStatsLoading } = $derived(userStatsQuery);
+	const user = useUser();
+	const { currentUser } = $derived(user);
 	let optimisticIdCounter = 0;
 	function generateOptimisticId() {
 		return -++optimisticIdCounter;
 	}
-
 	async function handleFiles(files: FileList | null) {
 		if (!files) return;
 
@@ -37,41 +41,41 @@
 			const chunk = validFiles.slice(i, i + concurrentUploads);
 			await Promise.allSettled(chunk.map(uploadPhoto));
 		}
+	}
 
-		async function uploadPhoto(file: File) {
-			const blob = URL.createObjectURL(file);
-			const optimisticId = generateOptimisticId();
-			const optimisticPhoto: PhotoInfo = {
-				id: optimisticId,
-				thumbnailUrl: blob,
-				status: PhotoStatus.UPLOADING,
-				uploadedAt: new Date().toISOString(),
-				height: null,
-				width: null,
-				imageUrl: '',
-				latitude: null,
-				longitude: null,
-				size: file.size,
-				sourceSize: file.size,
-				takenAt: null
-			};
+	async function uploadPhoto(file: File) {
+		const blob = URL.createObjectURL(file);
+		const optimisticId = generateOptimisticId();
+		const optimisticPhoto: PhotoInfo = {
+			id: optimisticId,
+			thumbnailUrl: blob,
+			status: PhotoStatus.UPLOADING,
+			uploadedAt: new Date().toISOString(),
+			height: null,
+			width: null,
+			imageUrl: '',
+			latitude: null,
+			longitude: null,
+			size: file.size,
+			sourceSize: file.size,
+			takenAt: null
+		};
 
-			photos = [...photos, { ...optimisticPhoto }];
-			try {
-				// create upload
-				const { photoId, uploadUrl } = await photoService.createUpload({
-					contentType: file.type,
-					filename: file.name,
-					size: file.size
-				});
-				// upload file to storage
-				await storageService.uploadFile(uploadUrl, file);
+		photos = [...photos, { ...optimisticPhoto }];
+		try {
+			// create upload
+			const { photoId, uploadUrl } = await photoService.createUpload({
+				contentType: file.type,
+				filename: file.name,
+				size: file.size
+			});
+			// upload file to storage
+			await storageService.uploadFile(uploadUrl, file);
 
-				await photoService.completeUpload(photoId);
-			} catch (error) {
-				photos = photos.filter((p) => p.id !== optimisticId);
-				toast.error(`Failed to upload photo: ${file.name}`);
-			}
+			await photoService.completeUpload(photoId);
+		} catch (error) {
+			photos = photos.filter((p) => p.id !== optimisticId);
+			toast.error(`Failed to upload photo: ${file.name}`);
 		}
 	}
 
@@ -112,7 +116,10 @@
 </script>
 
 <div class="mx-auto w-full max-w-4xl overflow-y-auto space-y-6 p-6">
-	<Button onclick={handleLogout} size="sm" variant="destructive">Logout</Button>
+	<div class="flex items-center justify-between">
+		<span>Hi {currentUser.username}!</span>
+		<Button onclick={handleLogout} size="sm" variant="secondary">Logout</Button>
+	</div>
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="space-y-1">
@@ -124,7 +131,16 @@
 		</Button>
 	</div>
 
-	<div class="flex items-center justify-between">
+	<div>
+		{#if isStatsLoading}
+			<Spinner />
+		{/if}
+		{#if stats}
+			<StorageStats {stats} />
+		{/if}
+	</div>
+
+	<div class="flex w-full">
 		<FileUploader label="add photo" onFilesChanged={handleFiles} />
 	</div>
 	{#if isLoading}

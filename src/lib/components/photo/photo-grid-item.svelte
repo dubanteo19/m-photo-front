@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PhotoInfo } from '$lib/types/photo';
-	import { formatFileSize } from '$lib/utils/common';
+	import { formatBytes } from '$lib/utils/common';
 
 	interface Props {
 		photo: PhotoInfo;
@@ -23,8 +23,8 @@
 		/>
 
 		<div class=" text-xs text-red-500">
-			<p class="text-xs line-through text-red-500">{formatFileSize(photo.sourceSize)}</p>
-			<p class="text-green-800">{formatFileSize(photo.size)}</p>
+			<p class="text-xs line-through text-red-500">{formatBytes(photo.sourceSize)}</p>
+			<p class="text-green-800">{formatBytes(photo.size)}</p>
 		</div>
 	</button>
 	<!-- Selection overlay -->
