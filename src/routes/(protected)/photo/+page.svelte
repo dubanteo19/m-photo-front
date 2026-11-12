@@ -10,7 +10,7 @@
 	import StorageStats from '$lib/components/photo/storageStats.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import { useUserPhotosQuery } from '$lib/queries/use-user-photo';
+	import { useUserPhotosQuery } from '$lib/queries/use-user-photos';
 	import { useUserStatsQuery } from '$lib/queries/use-user-stats';
 	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
 	import { Plus } from '@lucide/svelte';
@@ -22,6 +22,7 @@
 	const { query: userStatsQuery } = useUserStatsQuery();
 	const { isLoading, data } = $derived(query);
 	let photos = $derived(data?.pages.flatMap((page) => page.items) ?? []);
+	console.log('photos', data);
 	let { data: stats, isLoading: isStatsLoading } = $derived(userStatsQuery);
 	const user = useUser();
 	const { currentUser } = $derived(user);

@@ -1,7 +1,7 @@
 import { photoService } from '$lib/api/photo-service';
 import { createQuery } from '@tanstack/svelte-query';
 
-export const USER_STATS_QUERY_KEY = ['user-photos'];
+export const USER_STATS_QUERY_KEY = ['user-storage-stats'];
 
 export function useUserStatsQuery() {
     const query = createQuery(() => ({
