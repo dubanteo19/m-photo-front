@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PhotoInfo } from '$lib/types/photo';
 	import { formatBytes } from '$lib/utils/common';
+	import { CheckIcon, TicketIcon } from '@lucide/svelte';
 
 	interface Props {
 		photo: PhotoInfo;
@@ -22,8 +23,8 @@
 			class="size-full object-cover transition-transform duration-200 group-hover:scale-[1.03]"
 		/>
 
-		<div class=" text-xs text-red-500">
-			<p class="text-xs line-through text-red-500">{formatBytes(photo.sourceSize)}</p>
+		<div class="text-[0.625rem] md:text-xs flex px-2 gap-1">
+			<p class=" line-through text-red-500">{formatBytes(photo.sourceSize)}</p>
 			<p class="text-green-800">{formatBytes(photo.size)}</p>
 		</div>
 	</button>
@@ -36,19 +37,10 @@
 		class:opacity-100={selected || selectionMode}
 		class:opacity-0={!selected && !selectionMode}
 		class:md:group-hover:opacity-100={!selected}
+		class:bg-blue-500={selected}
 	>
 		{#if selected}
-			<span
-				class="flex size-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white"
-			>
-				✓
-			</span>
-		{:else}
-			<span class="size-5 rounded-full border-2 border-white bg-black/10"></span>
+			<CheckIcon size={16} />
 		{/if}
 	</button>
-
-	{#if selected}
-		<div class="pointer-events-none absolute inset-0 border-4 border-blue-500 bg-blue-500/10"></div>
-	{/if}
 </div>

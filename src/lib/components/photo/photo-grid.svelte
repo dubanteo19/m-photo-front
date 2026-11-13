@@ -5,13 +5,18 @@
 	interface Props {
 		photos: PhotoInfo[];
 		onPhotoClick?: (photo: PhotoInfo) => void;
+		selectedIds?: number[];
+		selectionMode?: boolean;
+		group?: boolean;
 	}
 
-	let { photos, onPhotoClick }: Props = $props();
-
-	let selectedIds = $state<number[]>([]);
-
-	let selectionMode = $derived(selectedIds.length > 0);
+	let {
+		photos,
+		onPhotoClick,
+		selectedIds = $bindable([]),
+		selectionMode = $bindable(false),
+		group = true
+	}: Props = $props();
 
 	let groups = $derived.by(() => {
 		const map = new Map<string, PhotoInfo[]>();
@@ -55,32 +60,34 @@
 
 		onPhotoClick?.(photo);
 	}
-
-	function clearSelection() {
-		selectedIds = [];
-	}
 </script>
 
 <div class="space-y-8">
-	{#each groups as group}
-		<section class="space-y-3">
-			<h2 class="text-lg font-semibold tracking-tight">
-				{group.title}
-			</h2>
-
-			<div
-				class="grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7"
-			>
-				{#each group.photos as photo (photo.id)}
-					<PhotoGridItem
-						{photo}
-						selected={selectedIds.includes(photo.id)}
-						{selectionMode}
-						onClick={() => handlePhotoClick(photo)}
-						onToggleSelect={() => toggleSelection(photo.id)}
-					/>
-				{/each}
-			</div>
-		</section>
-	{/each}
+	{#if !group}
+		{@render photoList(photos)}
+	{:else}
+		{#each groups as group}
+			<section class="space-y-3">
+				<h2 class="text-lg font-semibold tracking-tight">
+					{group.title}
+				</h2>
+				{@render photoList(group.photos)}
+			</section>
+		{/each}
+	{/if}
 </div>
+{#snippet photoList(photos: PhotoInfo[])}
+	<div
+		class="grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8"
+	>
+		{#each photos as photo (photo.id)}
+			<PhotoGridItem
+				{photo}
+				selected={selectedIds.includes(photo.id)}
+				{selectionMode}
+				onClick={() => handlePhotoClick(photo)}
+				onToggleSelect={() => toggleSelection(photo.id)}
+			/>
+		{/each}
+	</div>
+{/snippet}

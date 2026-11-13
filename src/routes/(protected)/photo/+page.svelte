@@ -1,31 +1,29 @@
 <script lang="ts">
 	import { photoService } from '$lib/api/photo-service';
-
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { authService } from '$lib/api/auth';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { storageService } from '$lib/api/storage';
 	import FileUploader from '$lib/components/common/file-uploader.svelte';
 	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
-	import StorageStats from '$lib/components/photo/storageStats.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { useUserPhotosQuery } from '$lib/queries/use-user-photos';
-	import { useUserStatsQuery } from '$lib/queries/use-user-stats';
+	import { useSidebar } from '$lib/stores/sidebar.svelte';
 	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
-	import { Plus } from '@lucide/svelte';
+	import { EllipsisVerticalIcon, Plus, PlusIcon, TrashIcon, XIcon } from '@lucide/svelte';
 	import PhotoSwipe from 'photoswipe';
 	import 'photoswipe/dist/photoswipe.css';
 	import { toast } from 'svelte-sonner';
-	import { useUser } from '$lib/stores/auth.svelte';
+	import Header from '$lib/components/layout/header.svelte';
+
+	const sidebar = useSidebar();
 	const { query } = useUserPhotosQuery();
-	const { query: userStatsQuery } = useUserStatsQuery();
 	const { isLoading, data } = $derived(query);
 	let photos = $derived(data?.pages.flatMap((page) => page.items) ?? []);
-	console.log('photos', data);
-	let { data: stats, isLoading: isStatsLoading } = $derived(userStatsQuery);
-	const user = useUser();
-	const { currentUser } = $derived(user);
+	let showDeleteDialog = $state(false);
+	let selectedIds = $state<number[]>([]);
+	let selectionMode = $derived(selectedIds.length > 0);
+
 	let optimisticIdCounter = 0;
 	function generateOptimisticId() {
 		return -++optimisticIdCounter;
@@ -110,66 +108,68 @@
 		pswp.init();
 	}
 
-	async function handleLogout() {
-		await authService.logout();
-		await goto(resolve('/login'));
+	function clearSelection() {
+		selectedIds = [];
+	}
+	async function handleMoveToTrash() {
+		try {
+			if (selectedIds.length === 0) return;
+			await photoService.moveToTrash(selectedIds);
+			photos = photos.filter((photo) => !selectedIds.includes(photo.id));
+			selectedIds = [];
+			showDeleteDialog = false;
+		} catch (error) {
+			toast.error('Failed to move photos to trash.');
+			console.error('Error moving photos to trash:', error);
+		}
 	}
 </script>
 
-<div class="mx-auto w-full max-w-4xl overflow-y-auto space-y-6 p-6">
-	<div class="flex items-center justify-between">
-		<span>Hi {currentUser.username}!</span>
-		<Button onclick={handleLogout} size="sm" variant="secondary">Logout</Button>
-	</div>
-	<!-- Header -->
-	<div class="flex items-center justify-between">
-		<div class="space-y-1">
-			<p class="text-sm">Create and manage your sticker packages.</p>
+<div class="mx-auto w-full overflow-y-auto space-y-6 p-6">
+	{#if selectionMode}
+		<div class="flex items-center justify-between">
+			<div class="flex items-center gap-2">
+				<Button size="icon" variant="secondary" onclick={clearSelection}>
+					<XIcon />
+				</Button>
+				<span>{selectedIds.length} selected</span>
+			</div>
+			<div class="flex items-center gap-1">
+				<Button size="icon" variant="secondary">
+					<PlusIcon />
+				</Button>
+				<Button onclick={() => (showDeleteDialog = true)} size="icon" variant="secondary">
+					<TrashIcon />
+				</Button>
+				<Button size="icon" variant="secondary">
+					<EllipsisVerticalIcon />
+				</Button>
+			</div>
 		</div>
+	{:else}
+		<!-- Header -->
+		<Header onFilesChanged={handleFiles} />
+	{/if}
 
-		<Button size="icon">
-			<Plus />
-		</Button>
-	</div>
-
-	<div>
-		{#if isStatsLoading}
-			<Spinner />
-		{/if}
-		{#if stats}
-			<StorageStats {stats} />
-		{/if}
-	</div>
-
-	<div class="flex w-full">
-		<FileUploader label="add photo" onFilesChanged={handleFiles} />
-	</div>
 	{#if isLoading}
 		<div class="flex-center min-h-60">
 			<Spinner />
 		</div>
 	{/if}
 	{#if photos.length > 0}
-		<PhotoGrid {photos} onPhotoClick={openPhoto} />
+		<PhotoGrid {photos} onPhotoClick={openPhoto} bind:selectedIds bind:selectionMode />
 	{/if}
 </div>
 
-<!-- <Dialog.Root
-	open={packToDelete !== null}
-	onOpenChange={(value) => {
-		if (!value) packToDelete = null;
-	}}
->
-	<Dialog.Content onCloseAutoFocus={(event) => event.preventDefault()} class="rounded-3xl">
+<Dialog.Root open={showDeleteDialog} onOpenChange={(value) => (showDeleteDialog = value)}>
+	<Dialog.Content class="rounded-3xl">
 		<Dialog.Header>
-			<Dialog.Title>Delete Pack?</Dialog.Title>
-			<Dialog.Description>
-				Are you sure you want to delete this sticker package? This action cannot be undone.
-			</Dialog.Description>
+			<Dialog.Title>Move to trash?</Dialog.Title>
+			<Dialog.Description>Are you sure you want to move this pack to trash</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Button variant="secondary" onclick={() => (packToDelete = null)}>Cancel</Button>
-			<Button variant="destructive" onclick={handleDeletePack}>Delete Pack</Button>
+			<Button variant="secondary" onclick={() => (showDeleteDialog = false)}>Cancel</Button>
+			<Button variant="destructive" onclick={handleMoveToTrash}>Move to Trash</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
-</Dialog.Root> -->
+</Dialog.Root>

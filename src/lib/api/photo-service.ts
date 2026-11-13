@@ -18,7 +18,11 @@ export const photoService = {
 			params: cursor ? { cursor } : {}
 		});
 	},
-
+	getTrashedPhotos: async (cursor?: string): Promise<PhotoPageResponse> => {
+		return apiClient.get('photos/trash', {
+			params: cursor ? { cursor } : {}
+		});
+	},
 	getPhoto: async (id: number): Promise<PhotoInfo> => {
 		return apiClient.get(`/photos/${id}`);
 	},
@@ -32,9 +36,11 @@ export const photoService = {
 	completeUpload: async (id: number): Promise<PhotoInfo> => {
 		return apiClient.post(`/photos/${id}/complete`);
 	},
-
-	deletePhoto: async (id: number): Promise<void> => {
-		return apiClient.delete(`/photos/${id}`);
+	moveToTrash: async (ids: number[]): Promise<void> => {
+		return apiClient.patch('/photos/trash', { ids });
+	},
+	restoreFromTrash: async (ids: number[]): Promise<void> => {
+		return apiClient.patch('/photos/restore', { ids });
 	},
 	getStorageStats: async (): Promise<AccountStorageStats> => {
 		return apiClient.get('/photos/storage-stats');

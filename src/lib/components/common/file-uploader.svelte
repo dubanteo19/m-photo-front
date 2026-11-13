@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { Upload } from '@lucide/svelte';
 	let {
-		label,
 		onFilesChanged,
 		multiple = true
 	}: {
-		label: string;
 		onFilesChanged: (files: FileList | null) => void;
 		multiple?: boolean;
 	} = $props();
@@ -17,13 +15,11 @@
 </script>
 
 <label
-	class="flex-center flex-1 max-h-32 aspect-square cursor-pointer flex-col rounded-lg border-2 border-dashed text-center transition hover:bg-muted"
+	class="flex-center aspect-square bg-primary rounded-full p-2 cursor-pointer flex-col transition hover:bg-muted hover:text-primary"
 	ondragover={(event) => event.preventDefault()}
 	ondrop={handleDrop}
 >
-	<Upload class="mb-2 size-5 text-muted-foreground" />
-	<span class="text-xs font-medium"> {label} </span>
-	<span class="mt-1 px-2 text-[10px] text-muted-foreground"> Drop or click </span>
+	<Upload size="16" />
 	<input
 		type="file"
 		accept="image/*"
