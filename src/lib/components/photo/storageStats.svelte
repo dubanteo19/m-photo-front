@@ -8,7 +8,7 @@
 <div class="rounded-2xl border border-gray-200 text-white p-2">
 	<!-- Header -->
 	<div class=" flex items-center justify-between">
-		<h3 class="text-sm font-semibold">Storage overview</h3>
+		<h3 class="text-sm font-semibold">Overview</h3>
 		<span
 			class="rounded-full px-2.5 py-1 font-medium text-green-700 dark:bg-green-950 dark:text-green-400"
 		>
@@ -33,15 +33,15 @@
 		</div>
 
 		<div>
-			<p class="mb-1 text-gray-500">Storage saved</p>
-			<p class="text-xl font-semibold tabular-nums text-green-600 dark:text-green-400">
+			<p class="mb-1 text-gray-500">Saved</p>
+			<p class="font-semibold tabular-nums text-green-600 dark:text-green-400">
 				{formatBytes(stats.savedBytes)}
 			</p>
 		</div>
 
 		<div>
 			<p class="mb-1 text-gray-500">Compression</p>
-			<p class="text-xl font-semibold tabular-nums text-orange-500 dark:text-white">
+			<p class="font-semibold tabular-nums text-orange-500 dark:text-white">
 				{stats.compressionPercentage.toFixed(1)}%
 			</p>
 		</div>

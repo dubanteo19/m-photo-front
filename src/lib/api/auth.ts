@@ -13,4 +13,3 @@ export const authService = {
 		return apiClient.post('/auth/register', payload);
 	}
 };
-

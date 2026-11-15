@@ -29,7 +29,7 @@ export function openPhotoViewer(photos: PhotoViewerItem[], selectedPhotoId: numb
 		maxZoomLevel: 3,
 		bgOpacity: 0.95,
 		loop: true,
-		padding: { top: 20, bottom: 40, left: 10, right: 10 },
+		padding: { top: 10, bottom: 10, left: 10, right: 10 },
 		closeOnVerticalDrag: true
 	});
 

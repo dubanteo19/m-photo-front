@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { photoService } from '$lib/api/photo-service';
-	import * as Dialog from '$lib/components/ui/dialog';
 	import { storageService } from '$lib/api/storage';
 	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -126,10 +125,12 @@
 	{/if}
 	{#if photos.length > 0}
 		<PhotoGrid {photos} onPhotoClick={openPhoto} bind:selectedIds bind:selectionMode />
+	{:else}
+		<h3 class="text-center">Gallary is empty! Start upload now</h3>
 	{/if}
 	<div
 		use:infiniteScroll={{
-			onLoadMore: () => query.fetchNextPage(),
+			onLoadMore: query.fetchNextPage,
 			hasNextPage: query.hasNextPage,
 			isFetching: query.isFetchingNextPage
 		}}

@@ -20,8 +20,8 @@
 	</div>
 	<div class="flex items-center gap-2">
 		<FileUploader onFilesChanged={(files) => onFilesChanged?.(files)} />
-		<Button size="icon">
-			<Plus />
-		</Button>
+		<!-- <Button size="icon"> -->
+		<!-- 	<Plus /> -->
+		<!-- </Button> -->
 	</div>
 </div>
