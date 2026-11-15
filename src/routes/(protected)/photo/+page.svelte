@@ -2,28 +2,25 @@
 	import { photoService } from '$lib/api/photo-service';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { storageService } from '$lib/api/storage';
-	import FileUploader from '$lib/components/common/file-uploader.svelte';
 	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { useUserPhotosQuery } from '$lib/queries/use-user-photos';
-	import { useSidebar } from '$lib/stores/sidebar.svelte';
 	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
-	import { EllipsisVerticalIcon, Plus, PlusIcon, TrashIcon, XIcon } from '@lucide/svelte';
-	import PhotoSwipe from 'photoswipe';
+	import { EllipsisVerticalIcon, LoaderIcon, PlusIcon, TrashIcon, XIcon } from '@lucide/svelte';
 	import 'photoswipe/dist/photoswipe.css';
 	import { toast } from 'svelte-sonner';
 	import Header from '$lib/components/layout/header.svelte';
+	import { infiniteScroll } from '$lib/utils/infinite-scroll';
+	import { openPhotoViewer } from '$lib/utils/photo-viewer';
+	import MoveToTrashDialog from '$lib/components/dialogs/photo/move-to-trash-dialog.svelte';
 
-	const sidebar = useSidebar();
 	const { query } = useUserPhotosQuery();
 	const { isLoading, data } = $derived(query);
 	let photos = $derived(data?.pages.flatMap((page) => page.items) ?? []);
 	let showDeleteDialog = $state(false);
 	let selectedIds = $state<number[]>([]);
 	let selectionMode = $derived(selectedIds.length > 0);
-
 	let optimisticIdCounter = 0;
 	function generateOptimisticId() {
 		return -++optimisticIdCounter;
@@ -31,7 +28,7 @@
 	async function handleFiles(files: FileList | null) {
 		if (!files) return;
 
-		const MAX_PHOTOS = 50;
+		const MAX_PHOTOS = 200;
 		if (files.length > MAX_PHOTOS)
 			return toast.error('You can only upload up to 50 photos at a time.');
 		const validFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
@@ -60,17 +57,14 @@
 			takenAt: null
 		};
 
-		photos = [...photos, { ...optimisticPhoto }];
+		photos = [{ ...optimisticPhoto }, ...photos];
 		try {
-			// create upload
 			const { photoId, uploadUrl } = await photoService.createUpload({
 				contentType: file.type,
 				filename: file.name,
 				size: file.size
 			});
-			// upload file to storage
 			await storageService.uploadFile(uploadUrl, file);
-
 			await photoService.completeUpload(photoId);
 		} catch (error) {
 			photos = photos.filter((p) => p.id !== optimisticId);
@@ -79,33 +73,7 @@
 	}
 
 	function openPhoto(selectedPhoto: PhotoInfo) {
-		const dataSource = photos.map((photo) => {
-			return {
-				src: photo.imageUrl,
-				width: photo.width ?? 800,
-				height: photo.height ?? 600,
-				alt: 'Chat attachment'
-			};
-		});
-
-		// 3. Find active index
-		const initialIndex = photos.findIndex((photo) => photo.id === selectedPhoto.id);
-		// 4. Instantiate PhotoSwipe
-		const pswp = new PhotoSwipe({
-			dataSource,
-			index: initialIndex >= 0 ? initialIndex : 0,
-			imageClickAction: 'zoom-or-close',
-			bgClickAction: 'close',
-			wheelToZoom: true,
-			secondaryZoomLevel: 1.5,
-			maxZoomLevel: 3,
-			bgOpacity: 0.95,
-			loop: true,
-			padding: { top: 20, bottom: 40, left: 100, right: 100 },
-			closeOnVerticalDrag: true
-		});
-
-		pswp.init();
+		openPhotoViewer(photos, selectedPhoto.id);
 	}
 
 	function clearSelection() {
@@ -159,17 +127,18 @@
 	{#if photos.length > 0}
 		<PhotoGrid {photos} onPhotoClick={openPhoto} bind:selectedIds bind:selectionMode />
 	{/if}
+	<div
+		use:infiniteScroll={{
+			onLoadMore: () => query.fetchNextPage(),
+			hasNextPage: query.hasNextPage,
+			isFetching: query.isFetchingNextPage
+		}}
+		class="flex min-h-16 items-center justify-center py-6"
+	>
+		{#if query.isFetchingNextPage}
+			<LoaderIcon class="size-5 animate-spin" />
+		{/if}
+	</div>
 </div>
 
-<Dialog.Root open={showDeleteDialog} onOpenChange={(value) => (showDeleteDialog = value)}>
-	<Dialog.Content class="rounded-3xl">
-		<Dialog.Header>
-			<Dialog.Title>Move to trash?</Dialog.Title>
-			<Dialog.Description>Are you sure you want to move this pack to trash</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Button variant="secondary" onclick={() => (showDeleteDialog = false)}>Cancel</Button>
-			<Button variant="destructive" onclick={handleMoveToTrash}>Move to Trash</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<MoveToTrashDialog bind:open={showDeleteDialog} onConfirm={handleMoveToTrash} />

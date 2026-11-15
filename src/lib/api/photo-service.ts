@@ -26,18 +26,17 @@ export const photoService = {
 	getPhoto: async (id: number): Promise<PhotoInfo> => {
 		return apiClient.get(`/photos/${id}`);
 	},
-
-	createUpload: async (
-		request: PhotoUploadRequest
-	): Promise<PhotoUploadResponse> => {
+	createUpload: async (request: PhotoUploadRequest): Promise<PhotoUploadResponse> => {
 		return apiClient.post('/photos', request);
 	},
-
 	completeUpload: async (id: number): Promise<PhotoInfo> => {
 		return apiClient.post(`/photos/${id}/complete`);
 	},
 	moveToTrash: async (ids: number[]): Promise<void> => {
 		return apiClient.patch('/photos/trash', { ids });
+	},
+	purge: async (ids: number[]): Promise<void> => {
+		return apiClient.post('photos/trash/purge', { ids });
 	},
 	restoreFromTrash: async (ids: number[]): Promise<void> => {
 		return apiClient.patch('/photos/restore', { ids });

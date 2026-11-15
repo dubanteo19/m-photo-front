@@ -6,16 +6,30 @@
 	import { useUserStatsQuery } from '$lib/queries/use-user-stats';
 	import { useUser } from '$lib/stores/auth.svelte';
 	import { useSidebar } from '$lib/stores/sidebar.svelte';
-	import { ImageIcon, TrashIcon } from '@lucide/svelte';
+	import { AlbumIcon, ImageIcon, TrashIcon } from '@lucide/svelte';
 	import StorageStats from '../photo/storageStats.svelte';
 	import { Spinner } from '../ui/spinner';
 	import { useQueryClient } from '@tanstack/svelte-query';
+	import IconButton from '../common/icon-button.svelte';
+	import type { Component } from 'svelte';
+	import { page } from '$app/state';
 	const { query } = useUserStatsQuery();
 	const { data: stats, isLoading } = $derived(query);
 	const sidebar = useSidebar();
 	const queryClient = useQueryClient();
 	const user = useUser();
 	const { currentUser } = $derived(user);
+	type NavItem = {
+		label: string;
+		href: string;
+		icon: Component;
+	};
+	const navLinks: NavItem[] = [
+		{ label: 'Photos', icon: ImageIcon, href: '/photo' },
+		{ label: 'Alumbs', icon: AlbumIcon, href: '/album' },
+		{ label: 'Trashs', icon: TrashIcon, href: '/trash' }
+	];
+
 	async function handleLogout() {
 		await authService.logout();
 		queryClient.clear();
@@ -34,27 +48,20 @@
 		md:static md:translate-x-0 md:transition-none
 	"
 >
-	<Button
-		onclick={() => sidebar.open()}
-		class="fixed md:hidden translate-x-58 translate-y-6 z-50 {sidebar.isOpen ? 'hidden' : 'block'}"
-		size="icon"
-		aria-label="Open sidebar">☰</Button
-	>
 	<div>
 		<h1 class="text-center mt-4">M-Photo</h1>
 		<nav class="px-2 py-4 gap-1 flex flex-col items-baseline justify-between">
-			<Button variant="outline" class="flex gap-2 w-full" onclick={() => goto(resolve('/photo'))}>
-				<ImageIcon />
-				<h3 class="flex-1 flex">Photos</h3>
-			</Button>
-			<Button variant="outline" class="flex  gap-2 w-full" onclick={() => goto(resolve('/photo'))}>
-				<ImageIcon />
-				<h3 class="flex-1 flex">Albums</h3>
-			</Button>
-			<Button variant="outline" class="flex  gap-2 w-full" onclick={() => goto(resolve('/trash'))}>
-				<TrashIcon size="20" />
-				<h3 class="flex-1 flex">Trash</h3>
-			</Button>
+			{#each navLinks as item}
+				{@const active = page.url.pathname === item.href}
+				<a href={item.href} class="w-full">
+					<IconButton
+						label={item.label}
+						class="w-full"
+						variant={active ? 'default' : 'outline'}
+						icon={item.icon}
+					/>
+				</a>
+			{/each}
 		</nav>
 	</div>
 	<div>

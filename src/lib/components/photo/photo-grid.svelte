@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { PhotoInfo } from '$lib/types/photo';
+	import { Check } from '@lucide/svelte';
+	import CheckButton from '../common/check-button.svelte';
 	import PhotoGridItem from './photo-grid-item.svelte';
 
 	interface Props {
@@ -52,6 +54,13 @@
 			: [...selectedIds, id];
 	}
 
+	function toggleGroup(ids: number[]) {
+		const allSelected = isGroupSelected(ids);
+		selectedIds = allSelected
+			? selectedIds.filter((id) => !ids.includes(id))
+			: [...new Set([...selectedIds, ...ids])];
+	}
+
 	function handlePhotoClick(photo: PhotoInfo) {
 		if (selectionMode) {
 			toggleSelection(photo.id);
@@ -60,6 +69,9 @@
 
 		onPhotoClick?.(photo);
 	}
+	function isGroupSelected(ids: number[]) {
+		return ids.every((id) => selectedIds.includes(id));
+	}
 </script>
 
 <div class="space-y-8">
@@ -67,10 +79,21 @@
 		{@render photoList(photos)}
 	{:else}
 		{#each groups as group}
+			{@const groupPhotoIds = group.photos.map((p) => p.id)}
+			{@const groupSelected = groupPhotoIds.every((id) => selectedIds.includes(id))}
+
 			<section class="space-y-3">
-				<h2 class="text-lg font-semibold tracking-tight">
-					{group.title}
-				</h2>
+				<div class="flex gap-2">
+					<CheckButton
+						class="flex-center size-7  rounded-full border border-white/80 bg-black/20 opacity-100!  shadow-sm transition-opacity"
+						onToggle={() => toggleGroup(groupPhotoIds)}
+						selected={groupSelected}
+						{selectionMode}
+					/>
+					<h2 class="text-lg font-semibold tracking-tight">
+						{group.title}
+					</h2>
+				</div>
 				{@render photoList(group.photos)}
 			</section>
 		{/each}
