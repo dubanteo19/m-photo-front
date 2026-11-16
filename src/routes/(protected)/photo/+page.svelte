@@ -1,29 +1,30 @@
 <script lang="ts">
 	import { photoService } from '$lib/api/photo-service';
 	import { storageService } from '$lib/api/storage';
+	import MoveToTrashDialog from '$lib/components/dialogs/photo/move-to-trash-dialog.svelte';
+	import Header from '$lib/components/layout/header.svelte';
 	import PhotoGrid from '$lib/components/photo/photo-grid.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Spinner } from '$lib/components/ui/spinner';
+	import UploadPanel from '$lib/components/upload/upload-panel.svelte';
+	import { UploadStatus, type UploadTask } from '$lib/components/upload/upload.types';
 	import { useUserPhotosQuery } from '$lib/queries/use-user-photos';
-	import { PhotoStatus, type PhotoInfo } from '$lib/types/photo';
-	import { EllipsisVerticalIcon, LoaderIcon, PlusIcon, TrashIcon, XIcon } from '@lucide/svelte';
-	import 'photoswipe/dist/photoswipe.css';
-	import { toast } from 'svelte-sonner';
-	import Header from '$lib/components/layout/header.svelte';
+	import { UserEvent, userEventService } from '$lib/services/user-event.svelte';
+	import { type PhotoInfo } from '$lib/types/photo';
 	import { infiniteScroll } from '$lib/utils/infinite-scroll';
 	import { openPhotoViewer } from '$lib/utils/photo-viewer';
-	import MoveToTrashDialog from '$lib/components/dialogs/photo/move-to-trash-dialog.svelte';
+	import { EllipsisVerticalIcon, LoaderIcon, PlusIcon, TrashIcon, XIcon } from '@lucide/svelte';
+	import 'photoswipe/dist/photoswipe.css';
+	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
-	const { query } = useUserPhotosQuery();
+	const { query, moveToTrash } = useUserPhotosQuery();
 	const { isLoading, data } = $derived(query);
 	let photos = $derived(data?.pages.flatMap((page) => page.items) ?? []);
 	let showDeleteDialog = $state(false);
 	let selectedIds = $state<number[]>([]);
+	let uploadTasks = $state<UploadTask[]>([]);
 	let selectionMode = $derived(selectedIds.length > 0);
-	let optimisticIdCounter = 0;
-	function generateOptimisticId() {
-		return -++optimisticIdCounter;
-	}
 	async function handleFiles(files: FileList | null) {
 		if (!files) return;
 
@@ -38,35 +39,40 @@
 		}
 	}
 
-	async function uploadPhoto(file: File) {
-		const blob = URL.createObjectURL(file);
-		const optimisticId = generateOptimisticId();
-		const optimisticPhoto: PhotoInfo = {
-			id: optimisticId,
-			thumbnailUrl: blob,
-			status: PhotoStatus.UPLOADING,
-			uploadedAt: new Date().toISOString(),
-			height: null,
-			width: null,
-			imageUrl: '',
-			latitude: null,
-			longitude: null,
-			size: file.size,
-			sourceSize: file.size,
-			takenAt: null
+	onMount(() => {
+		const handlePhotoProcessed = (payload: PhotoInfo) => {
+			photos = [payload, ...photos];
+			updateTaskStatus(payload.id, UploadStatus.COMPLETED);
 		};
+		return userEventService.subscribe(UserEvent.PHOTO_PROCESSED, handlePhotoProcessed);
+	});
 
-		photos = [{ ...optimisticPhoto }, ...photos];
+	function addTask(task: UploadTask) {
+		uploadTasks = [...uploadTasks, task];
+	}
+
+	function updateTaskStatus(photoId: number, status: UploadStatus) {
+		uploadTasks = uploadTasks.map((task) => (task.id === photoId ? { ...task, status } : task));
+	}
+
+	async function uploadPhoto(file: File) {
 		try {
 			const { photoId, uploadUrl } = await photoService.createUpload({
 				contentType: file.type,
 				filename: file.name,
 				size: file.size
 			});
+			addTask({
+				id: photoId,
+				filename: file.name,
+				status: UploadStatus.UPLOADING,
+				size: file.size
+			});
 			await storageService.uploadFile(uploadUrl, file);
+			updateTaskStatus(photoId, UploadStatus.UPLOADED);
 			await photoService.completeUpload(photoId);
+			updateTaskStatus(photoId, UploadStatus.PROCESSING);
 		} catch (error) {
-			photos = photos.filter((p) => p.id !== optimisticId);
 			toast.error(`Failed to upload photo: ${file.name}`);
 		}
 	}
@@ -78,11 +84,11 @@
 	function clearSelection() {
 		selectedIds = [];
 	}
+
 	async function handleMoveToTrash() {
 		try {
 			if (selectedIds.length === 0) return;
-			await photoService.moveToTrash(selectedIds);
-			photos = photos.filter((photo) => !selectedIds.includes(photo.id));
+			await moveToTrash(selectedIds);
 			selectedIds = [];
 			showDeleteDialog = false;
 		} catch (error) {
@@ -140,6 +146,7 @@
 			<LoaderIcon class="size-5 animate-spin" />
 		{/if}
 	</div>
+	<UploadPanel tasks={uploadTasks} />
 </div>
 
 <MoveToTrashDialog bind:open={showDeleteDialog} onConfirm={handleMoveToTrash} />

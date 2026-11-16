@@ -1,18 +1,20 @@
 <script lang="ts">
 	import SidePanel from '$lib/components/layout/side-panel.svelte';
+	import { userEventService } from '$lib/services/user-event.svelte.js';
 	import { setProtectedUser } from '$lib/stores/auth.svelte';
 	import { initSidebar } from '$lib/stores/sidebar.svelte.js';
+	import { onMount } from 'svelte';
 
 	let { data, children } = $props();
 
 	const sidebar = initSidebar();
 	setProtectedUser(data.user);
-	// onMount(() => {
-	// 	userEventService.connect();
-	// 	return () => {
-	// 		userEventService.disconnect();
-	// 	};
-	// });
+	onMount(() => {
+		userEventService.connect();
+		return () => {
+			userEventService.disconnect();
+		};
+	});
 </script>
 
 <div class="app flex min-h-0 h-screen overflow-hidden">

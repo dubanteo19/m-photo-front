@@ -7,7 +7,7 @@
 	import { useUser } from '$lib/stores/auth.svelte';
 	import { useSidebar } from '$lib/stores/sidebar.svelte';
 	import { AlbumIcon, ImageIcon, TrashIcon } from '@lucide/svelte';
-	import StorageStats from '../photo/storageStats.svelte';
+	import StorageStats from '../photo/storage-stats.svelte';
 	import { Spinner } from '../ui/spinner';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import IconButton from '../common/icon-button.svelte';

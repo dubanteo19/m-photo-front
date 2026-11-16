@@ -1,39 +1,19 @@
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import type { StickerStatus } from '$lib/types/sticker';
+import type { PhotoInfo } from '$lib/types/photo';
 
+type PhotoProcessed = PhotoInfo;
 
-type RoomUnreadUpdated = {
-    roomId: string;
-    seq: number;
-};
-
-type StickerStatusChanged = {
-    stickerId: number;
-    status: StickerStatus;
-};
-
-
-type RoomUpdated = {
-    roomId: string;
-    name?: string;
-    avatar?: string;
-    unreadCount?: number;
-};
 
 type EventHandler<T> = (payload: T) => void;
 
 export const UserEvent = {
-    ROOM_UPDATED: 'ROOM_UPDATED',
-    ROOM_UNREAD_UPDATED: 'ROOM_UNREAD_UPDATED',
-    STICKER_STATUS_CHANGED: 'STICKER_STATUS_CHANGED',
+    PHOTO_PROCESSED: 'PHOTO_PROCESSED',
 } as const;
 
 export type UserEvent = typeof UserEvent[keyof typeof UserEvent];
 
 type UserEventPayloadMap = {
-    [UserEvent.ROOM_UPDATED]: RoomUpdated;
-    [UserEvent.ROOM_UNREAD_UPDATED]: RoomUnreadUpdated;
-    [UserEvent.STICKER_STATUS_CHANGED]: StickerStatusChanged;
+    [UserEvent.PHOTO_PROCESSED]: PhotoProcessed;
 };
 
 export type UserEventType = keyof UserEventPayloadMap;
