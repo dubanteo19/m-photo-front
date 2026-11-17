@@ -31,7 +31,9 @@
 		/>
 
 		<div class="text-[0.625rem] md:text-xs flex px-2 gap-1">
-			<p class=" line-through text-red-500">{formatBytes(photo.sourceSize)}</p>
+			{#if photo.sourceSize > photo.size}
+				<p class=" line-through text-red-500">{formatBytes(photo.sourceSize)}</p>
+			{/if}
 			<p class="text-green-800">{formatBytes(photo.size)}</p>
 		</div>
 	</button>
