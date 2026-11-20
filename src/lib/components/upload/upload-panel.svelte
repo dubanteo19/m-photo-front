@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { ChevronDown, ChevronUp, Upload } from '@lucide/svelte';
-
 	import { UploadStatus, type UploadTask } from './upload.types';
 	import UploadTaskItem from './upload-task-item.svelte';
+	import { XIcon } from '@lucide/svelte';
+	import Button from '../ui/button/button.svelte';
 
 	let { tasks = [] }: { tasks: UploadTask[] } = $props();
 
 	const completedCount = $derived(tasks.filter((t) => t.status === UploadStatus.COMPLETED).length);
-
+	let isOpen = $state(true);
 	const activeCount = $derived(
 		tasks.filter(
 			(t) =>
@@ -21,7 +21,7 @@
 	const failedCount = $derived(tasks.filter((t) => t.status === UploadStatus.FAILED).length);
 </script>
 
-{#if tasks.length > 0}
+{#if tasks.length > 0 && isOpen}
 	<div
 		class="fixed bottom-6 right-6 z-50 w-[min(350px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-secondary text-muted-foreground border shadow-xl"
 	>
@@ -44,6 +44,9 @@
 					</p>
 				</div>
 			</div>
+			<Button variant="ghost" size="icon" onclick={() => (isOpen = false)}>
+				<XIcon />
+			</Button>
 		</header>
 
 		<div class="max-h-80 divide-y overflow-y-auto">
